@@ -1,157 +1,164 @@
 import { authClient } from "@/lib/auth-client";
-import { signInSchema, signUpSchema } from "@/lib/schemas";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import Loader from "./loader";
 import { Button } from "./ui/button";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "./ui/form";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
-export default function AuthForm() {
-	const navigate = useNavigate({
-		from: "/",
-	});
-	const [isSignUp, setIsSignUp] = useState(false);
-	const { isPending } = authClient.useSession();
+export default function SignUpForm({
+  onSwitchToSignIn,
+}: {
+  onSwitchToSignIn: () => void;
+}) {
+  const navigate = useNavigate({
+    from: "/",
+  });
+  const { isPending } = authClient.useSession();
 
-	const form = useForm<z.infer<typeof signUpSchema>>({
-		resolver: zodResolver(isSignUp ? signUpSchema : signInSchema),
-		defaultValues: {
-			email: "",
-			password: "",
-			name: "",
-		},
-	});
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+      name: "",
+    },
+    onSubmit: async ({ value }) => {
+      await authClient.signUp.email(
+        {
+          email: value.email,
+          password: value.password,
+          name: value.name,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Sign up successful");
+            navigate({
+              to: "/dashboard",
+            });
+          },
+          onError: (error) => {
+            toast.error(error.error.message);
+          },
+        },
+      );
+    },
+    validators: {
+      onSubmit: z.object({
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        email: z.string().email("Invalid email address"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+      }),
+    },
+  });
 
-	const onSubmit = async (values: z.infer<typeof signUpSchema>) => {
-		if (isSignUp) {
-			await authClient.signUp.email(
-				{
-					email: values.email,
-					password: values.password,
-					name: values.name,
-				},
-				{
-					onSuccess: () => {
-						toast.success("Sign up successful");
-						navigate({
-							to: "/dashboard",
-						});
-					},
-					onError: (ctx) => {
-						form.setError("email", {
-							type: "manual",
-							message: ctx.error.message,
-						});
-					},
-				},
-			);
-		} else {
-			await authClient.signIn.email(
-				{
-					email: values.email,
-					password: values.password,
-				},
-				{
-					onSuccess: () => {
-						toast.success("Sign in successful");
-						navigate({
-							to: "/dashboard",
-						});
-					},
-					onError: (ctx) => {
-						form.setError("email", {
-							type: "manual",
-							message: ctx.error.message,
-						});
-					},
-				},
-			);
-		}
-	};
+  if (isPending) {
+    return <Loader />;
+  }
 
-	if (isPending) {
-		return <Loader />;
-	}
+  return (
+    <div className="mx-auto mt-10 max-w-md p-6">
+      <h1 className="mb-6 text-center text-3xl font-bold">Create Account</h1>
 
-	return (
-		<div className="mx-auto mt-10 max-w-md p-6">
-			<h1 className="mb-6 text-center text-3xl font-bold">
-				{isSignUp ? "Create Account" : "Welcome Back"}
-			</h1>
-			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-					{isSignUp && (
-						<FormField
-							control={form.control}
-							name="name"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Name</FormLabel>
-									<FormControl>
-										<Input {...field} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					)}
-					<FormField
-						control={form.control}
-						name="email"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Email</FormLabel>
-								<FormControl>
-									<Input type="email" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="password"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel>Password</FormLabel>
-								<FormControl>
-									<Input type="password" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<Button type="submit" className="w-full">
-						{isSignUp ? "Sign Up" : "Sign In"}
-					</Button>
-				</form>
-			</Form>
-			<div className="mt-4 text-center">
-				<Button
-					variant="link"
-					onClick={() => {
-						setIsSignUp(!isSignUp);
-						form.reset();
-					}}
-					className="text-indigo-600 hover:text-indigo-800"
-				>
-					{isSignUp
-						? "Already have an account? Sign In"
-						: "Need an account? Sign Up"}
-				</Button>
-			</div>
-		</div>
-	);
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void form.handleSubmit();
+        }}
+        className="space-y-4"
+      >
+        <div>
+          <form.Field name="name">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Name</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
+        <div>
+          <form.Field name="email">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Email</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="email"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
+        <div>
+          <form.Field name="password">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Password</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p key={error?.message} className="text-red-500">
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
+        <form.Subscribe>
+          {(state) => (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!state.canSubmit || state.isSubmitting}
+            >
+              {state.isSubmitting ? "Submitting..." : "Sign Up"}
+            </Button>
+          )}
+        </form.Subscribe>
+      </form>
+
+      <div className="mt-4 text-center">
+        <Button
+          variant="link"
+          onClick={onSwitchToSignIn}
+          className="text-indigo-600 hover:text-indigo-800"
+        >
+          Already have an account? Sign In
+        </Button>
+      </div>
+    </div>
+  );
 }
