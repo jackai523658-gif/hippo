@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { ModeToggle } from "./mode-toggle";
-import UserMenu from "./user-menu";
 
 export default function Header() {
   return (
@@ -16,27 +15,9 @@ export default function Header() {
           >
             Home
           </Link>
-          <Link
-            to="/dashboard"
-            activeProps={{
-              className: "font-bold",
-            }}
-            activeOptions={{ exact: true }}
-          >
-            Dashboard
-          </Link>
-          <Link
-            to="/about"
-            activeProps={{
-              className: "font-bold",
-            }}
-          >
-            About
-          </Link>
         </div>
         <div className="flex flex-row items-center gap-2">
           <ModeToggle />
-          <UserMenu />
         </div>
       </div>
       <hr />

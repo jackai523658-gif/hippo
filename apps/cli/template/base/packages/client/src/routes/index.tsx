@@ -1,4 +1,3 @@
-import AuthForms from "@/components/auth-forms";
 import { trpc } from "@/utils/trpc";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -13,7 +12,6 @@ function HomeComponent() {
       <h3>Welcome Home!</h3>
       <Link to="/dashboard">Go to Dashboard</Link>
       <p>healthCheck: {healthCheck.data}</p>
-      <AuthForms />
     </div>
   );
 }
