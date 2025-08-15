@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
 
 jobs:
   release:
@@ -13,9 +12,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare repository
-        run: git fetch --unshallow --tags
+        run: |
+          git fetch --unshallow --tags
+          git checkout main
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
