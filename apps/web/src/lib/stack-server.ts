@@ -1,0 +1,65 @@
+import {
+	createLoader,
+	parseAsArrayOf,
+	parseAsString,
+	parseAsStringEnum,
+} from "nuqs/server";
+import { DEFAULT_STACK, type StackState, TECH_OPTIONS } from "@/lib/constant";
+
+const getValidIds = (category: keyof typeof TECH_OPTIONS): string[] => {
+	return TECH_OPTIONS[category]?.map((opt) => opt.id) ?? [];
+};
+
+// Server-side parsers (same as client-side but imported from nuqs/server)
+const serverStackParsers = {
+	projectName: parseAsString.withDefault(DEFAULT_STACK.projectName),
+	webFrontend: parseAsArrayOf(parseAsString).withDefault(
+		DEFAULT_STACK.webFrontend,
+	),
+	nativeFrontend: parseAsArrayOf(parseAsString).withDefault(
+		DEFAULT_STACK.nativeFrontend,
+	),
+	runtime: parseAsStringEnum<StackState["runtime"]>(
+		getValidIds("runtime"),
+	).withDefault(DEFAULT_STACK.runtime),
+	backend: parseAsStringEnum<StackState["backend"]>(
+		getValidIds("backend"),
+	).withDefault(DEFAULT_STACK.backend),
+	api: parseAsStringEnum<StackState["api"]>(getValidIds("api")).withDefault(
+		DEFAULT_STACK.api,
+	),
+	database: parseAsStringEnum<StackState["database"]>(
+		getValidIds("database"),
+	).withDefault(DEFAULT_STACK.database),
+	orm: parseAsStringEnum<StackState["orm"]>(getValidIds("orm")).withDefault(
+		DEFAULT_STACK.orm,
+	),
+	dbSetup: parseAsStringEnum<StackState["dbSetup"]>(
+		getValidIds("dbSetup"),
+	).withDefault(DEFAULT_STACK.dbSetup),
+	auth: parseAsStringEnum<StackState["auth"]>(getValidIds("auth")).withDefault(
+		DEFAULT_STACK.auth,
+	),
+	packageManager: parseAsStringEnum<StackState["packageManager"]>(
+		getValidIds("packageManager"),
+	).withDefault(DEFAULT_STACK.packageManager),
+	addons: parseAsArrayOf(parseAsString).withDefault(DEFAULT_STACK.addons),
+	examples: parseAsArrayOf(parseAsString).withDefault(DEFAULT_STACK.examples),
+	git: parseAsStringEnum<StackState["git"]>(["true", "false"]).withDefault(
+		DEFAULT_STACK.git,
+	),
+	install: parseAsStringEnum<StackState["install"]>([
+		"true",
+		"false",
+	]).withDefault(DEFAULT_STACK.install),
+	webDeploy: parseAsStringEnum<StackState["webDeploy"]>(
+		getValidIds("webDeploy"),
+	).withDefault(DEFAULT_STACK.webDeploy),
+	serverDeploy: parseAsStringEnum<StackState["serverDeploy"]>(
+		getValidIds("serverDeploy"),
+	).withDefault(DEFAULT_STACK.serverDeploy),
+};
+
+export const loadStackParams = createLoader(serverStackParsers);
+
+export type LoadedStackState = Awaited<ReturnType<typeof loadStackParams>>;

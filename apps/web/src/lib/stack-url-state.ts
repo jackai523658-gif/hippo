@@ -83,4 +83,5 @@ export const stackQueryStatesOptions = {
 	history: "replace" as const,
 	shallow: false,
 	urlKeys: stackUrlKeys,
+	clearOnDefault: true,
 };
