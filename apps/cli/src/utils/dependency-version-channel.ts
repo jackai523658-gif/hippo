@@ -1,3 +1,4 @@
+import { log } from "@clack/prompts";
 import fs from "fs-extra";
 import path from "node:path";
 
@@ -10,6 +11,28 @@ type NpmPackageInfo = {
 
 const VERSION_CACHE = new Map<string, NpmPackageInfo>();
 const PRERELEASE_TAG_PRIORITY = ["beta", "next", "rc", "canary", "alpha"] as const;
+const REGISTRY_FETCH_TIMEOUT_MS = 10_000;
+const REGISTRY_CONCURRENCY = 10;
+
+function mapWithConcurrency<T, R>(
+  items: T[],
+  fn: (item: T, index: number) => Promise<R>,
+  concurrency: number,
+): Promise<R[]> {
+  const results: R[] = Array.from({ length: items.length }) as R[];
+  let index = 0;
+
+  async function worker() {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]!, i);
+    }
+  }
+
+  return Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker())).then(
+    () => results,
+  );
+}
 
 type ParsedVersion = {
   major: number;
@@ -18,7 +41,7 @@ type ParsedVersion = {
   prerelease: Array<number | string>;
 };
 
-function parseVersion(value: string): ParsedVersion {
+export function parseVersion(value: string): ParsedVersion {
   const normalized = value.replace(/^[^\d]*/, "");
   const [base, prerelease = ""] = normalized.split("-", 2);
   const [major = "0", minor = "0", patch = "0"] = base.split(".");
@@ -33,7 +56,7 @@ function parseVersion(value: string): ParsedVersion {
   };
 }
 
-function compareVersions(a: string, b: string): number {
+export function compareVersions(a: string, b: string): number {
   const left = parseVersion(a);
   const right = parseVersion(b);
 
@@ -90,14 +113,19 @@ async function fetchPackageInfo(packageName: string): Promise<NpmPackageInfo> {
 
   const encodedName = encodeURIComponent(packageName).replace("%40", "@");
   const response = await fetch(`https://registry.npmjs.org/${encodedName}`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/vnd.npm.install-v1+json" },
+    signal: AbortSignal.timeout(REGISTRY_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
     throw new Error(`Package ${packageName} not found (${response.status})`);
   }
 
-  const data = (await response.json()) as NpmPackageInfo;
+  const raw = (await response.json()) as Record<string, unknown>;
+  const data: NpmPackageInfo = {
+    "dist-tags": raw["dist-tags"] as Record<string, string> | undefined,
+    versions: raw["versions"] as Record<string, unknown> | undefined,
+  };
   VERSION_CACHE.set(packageName, data);
   return data;
 }
@@ -196,19 +224,21 @@ export async function applyDependencyVersionChannel(
 
   const resolvedVersions = new Map<string, string>();
 
-  await Promise.all(
-    [...packageNames].map(async (packageName) => {
+  await mapWithConcurrency(
+    [...packageNames],
+    async (packageName) => {
       try {
         const resolvedVersion = await resolveRegistryVersion(packageName, channel);
         resolvedVersions.set(packageName, resolvedVersion);
       } catch (error) {
-        console.warn(
-          `Warning: Failed to resolve ${channel} version for ${packageName}: ${
+        log.warn(
+          `Failed to resolve ${channel} version for ${packageName}: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
       }
-    }),
+    },
+    REGISTRY_CONCURRENCY,
   );
 
   if (resolvedVersions.size === 0) return;

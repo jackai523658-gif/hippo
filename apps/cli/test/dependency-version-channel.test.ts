@@ -5,6 +5,8 @@ import path from "node:path";
 
 import {
   applyDependencyVersionChannel,
+  compareVersions,
+  parseVersion,
   selectRegistryVersionForChannel,
 } from "../src/utils/dependency-version-channel";
 
@@ -13,6 +15,133 @@ const originalFetch = global.fetch;
 afterEach(() => {
   global.fetch = originalFetch;
   mock.restore();
+});
+
+describe("parseVersion", () => {
+  it("parses standard semver", () => {
+    expect(parseVersion("1.2.3")).toEqual({
+      major: 1,
+      minor: 2,
+      patch: 3,
+      prerelease: [],
+    });
+  });
+
+  it("strips leading non-digit characters (caret, tilde)", () => {
+    expect(parseVersion("^1.2.3")).toEqual({
+      major: 1,
+      minor: 2,
+      patch: 3,
+      prerelease: [],
+    });
+    expect(parseVersion("~4.5.6")).toEqual({
+      major: 4,
+      minor: 5,
+      patch: 6,
+      prerelease: [],
+    });
+  });
+
+  it("parses prerelease identifiers", () => {
+    expect(parseVersion("3.0.0-beta.2")).toEqual({
+      major: 3,
+      minor: 0,
+      patch: 0,
+      prerelease: ["beta", 2],
+    });
+
+    expect(parseVersion("1.0.0-alpha.1")).toEqual({
+      major: 1,
+      minor: 0,
+      patch: 0,
+      prerelease: ["alpha", 1],
+    });
+
+    expect(parseVersion("2.0.0-rc.1")).toEqual({
+      major: 2,
+      minor: 0,
+      patch: 0,
+      prerelease: ["rc", 1],
+    });
+  });
+
+  it("parses compound prerelease tags", () => {
+    expect(parseVersion("5.0.0-beta.1.2")).toEqual({
+      major: 5,
+      minor: 0,
+      patch: 0,
+      prerelease: ["beta", 1, 2],
+    });
+  });
+
+  it("handles missing minor and patch", () => {
+    expect(parseVersion("5")).toEqual({
+      major: 5,
+      minor: 0,
+      patch: 0,
+      prerelease: [],
+    });
+
+    expect(parseVersion("5.1")).toEqual({
+      major: 5,
+      minor: 1,
+      patch: 0,
+      prerelease: [],
+    });
+  });
+
+  it("handles non-numeric segments as zero", () => {
+    expect(parseVersion("abc")).toEqual({
+      major: 0,
+      minor: 0,
+      patch: 0,
+      prerelease: [],
+    });
+  });
+});
+
+describe("compareVersions", () => {
+  it("compares major versions", () => {
+    expect(compareVersions("2.0.0", "1.0.0")).toBeGreaterThan(0);
+    expect(compareVersions("1.0.0", "2.0.0")).toBeLessThan(0);
+    expect(compareVersions("1.0.0", "1.0.0")).toBe(0);
+  });
+
+  it("compares minor versions", () => {
+    expect(compareVersions("1.2.0", "1.1.0")).toBeGreaterThan(0);
+    expect(compareVersions("1.1.0", "1.2.0")).toBeLessThan(0);
+  });
+
+  it("compares patch versions", () => {
+    expect(compareVersions("1.0.2", "1.0.1")).toBeGreaterThan(0);
+    expect(compareVersions("1.0.1", "1.0.2")).toBeLessThan(0);
+  });
+
+  it("stable releases sort higher than prereleases", () => {
+    expect(compareVersions("1.0.0", "1.0.0-beta.1")).toBeGreaterThan(0);
+    expect(compareVersions("1.0.0-beta.1", "1.0.0")).toBeLessThan(0);
+  });
+
+  it("compares prerelease identifiers", () => {
+    expect(compareVersions("1.0.0-beta.2", "1.0.0-beta.1")).toBeGreaterThan(0);
+    expect(compareVersions("1.0.0-beta.1", "1.0.0-beta.2")).toBeLessThan(0);
+    expect(compareVersions("1.0.0-beta.1", "1.0.0-beta.1")).toBe(0);
+  });
+
+  it("compares different prerelease tags alphabetically", () => {
+    expect(compareVersions("1.0.0-alpha", "1.0.0-beta")).toBeLessThan(0);
+    expect(compareVersions("1.0.0-beta", "1.0.0-alpha")).toBeGreaterThan(0);
+  });
+
+  it("numeric prerelease parts sort lower than string parts", () => {
+    expect(compareVersions("1.0.0-1", "1.0.0-alpha")).toBeLessThan(0);
+    expect(compareVersions("1.0.0-alpha", "1.0.0-1")).toBeGreaterThan(0);
+  });
+
+  it("shorter prerelease sorts lower when prefix matches", () => {
+    expect(compareVersions("1.0.0-beta", "1.0.0-beta.1")).toBeLessThan(0);
+    expect(compareVersions("1.0.0-beta.1", "1.0.0-beta")).toBeGreaterThan(0);
+  });
 });
 
 describe("selectRegistryVersionForChannel", () => {
@@ -28,6 +157,17 @@ describe("selectRegistryVersionForChannel", () => {
         "latest",
       ),
     ).toBe("2.3.4");
+  });
+
+  it("returns null when no latest dist-tag exists", () => {
+    expect(
+      selectRegistryVersionForChannel(
+        {
+          "dist-tags": {},
+        },
+        "latest",
+      ),
+    ).toBeNull();
   });
 
   it("prefers beta dist-tags and falls back to prereleases", () => {
@@ -63,6 +203,39 @@ describe("selectRegistryVersionForChannel", () => {
         "beta",
       ),
     ).toBe("4.0.0-next.3");
+  });
+
+  it("prefers rc over canary and alpha for beta channel", () => {
+    expect(
+      selectRegistryVersionForChannel(
+        {
+          "dist-tags": {
+            latest: "1.0.0",
+            rc: "1.1.0-rc.1",
+            canary: "1.1.0-canary.5",
+            alpha: "1.1.0-alpha.10",
+          },
+          versions: {},
+        },
+        "beta",
+      ),
+    ).toBe("1.1.0-rc.1");
+  });
+
+  it("falls back to latest when no beta/prerelease exists", () => {
+    expect(
+      selectRegistryVersionForChannel(
+        {
+          "dist-tags": {
+            latest: "1.0.0",
+          },
+          versions: {
+            "1.0.0": {},
+          },
+        },
+        "beta",
+      ),
+    ).toBe("1.0.0");
   });
 });
 
@@ -115,7 +288,7 @@ describe("applyDependencyVersionChannel", () => {
           headers: { "Content-Type": "application/json" },
         },
       );
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await applyDependencyVersionChannel(projectDir, "latest");
 
@@ -128,5 +301,53 @@ describe("applyDependencyVersionChannel", () => {
     expect(packageJson.devDependencies.typescript).toBe("^5.9.4");
     expect(packageJson.devDependencies["local-package"]).toBe("file:../local-package");
     expect(requestedPackages.sort()).toEqual(["next", "react", "tailwindcss", "typescript"]);
+  });
+
+  it("resolves latest channel from real npm registry",
+    async () => {
+      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "bfs-version-channel-real-"));
+
+      await fs.writeJson(
+        path.join(projectDir, "package.json"),
+        {
+          name: "real-registry-test",
+          dependencies: {
+            "tiny-tarball": "^1.0.0",
+          },
+        },
+        { spaces: 2 },
+      );
+
+      await applyDependencyVersionChannel(projectDir, "latest");
+
+      const packageJson = await fs.readJson(path.join(projectDir, "package.json"));
+      expect(packageJson.dependencies["tiny-tarball"]).toMatch(/^\^1\.\d+\.\d+$/);
+    },
+    { timeout: 20_000 },
+  );
+
+  it("skips stable channel without making any fetch calls", async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "bfs-version-channel-stable-"));
+
+    await fs.writeJson(
+      path.join(projectDir, "package.json"),
+      {
+        name: "stable-test",
+        dependencies: { react: "^18.0.0" },
+      },
+      { spaces: 2 },
+    );
+
+    const fetchSpy = mock(() => {
+      throw new Error("fetch should not be called for stable channel");
+    });
+    global.fetch = fetchSpy as unknown as typeof fetch;
+
+    await applyDependencyVersionChannel(projectDir, "stable");
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    const packageJson = await fs.readJson(path.join(projectDir, "package.json"));
+    expect(packageJson.dependencies.react).toBe("^18.0.0");
   });
 });
