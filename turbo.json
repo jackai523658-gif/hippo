@@ -17,6 +17,12 @@
       "outputs": [],
       "cache": false
     },
+    "web#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": [],
+      "cache": false
+    },
     "test:e2e": {
       "dependsOn": ["^build", "build"],
       "inputs": ["$TURBO_DEFAULT$"],
