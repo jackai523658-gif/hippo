@@ -3,6 +3,7 @@ import { ArrowRight, Check, Copy } from "lucide-react";
 import { motion } from "motion/react";
 import { lazy, Suspense, useState } from "react";
 
+import { latestChangelogRelease } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 
 import PackageIcon from "./icons";
@@ -22,7 +23,9 @@ const COMMANDS: Record<PM, string> = {
 };
 
 const ACCENT_TEXT = "text-black dark:text-[#C6E853]";
-const RELEASE_BADGE = `v${__BFS_CLI_VERSION__} · ${__BFS_BUILD_DATE__}`;
+const RELEASE_BADGE = latestChangelogRelease
+  ? `${latestChangelogRelease.version} · ${latestChangelogRelease.displayDate}`
+  : "";
 
 export default function HeroSection() {
   const [pm, setPm] = useState<PM>("bun");

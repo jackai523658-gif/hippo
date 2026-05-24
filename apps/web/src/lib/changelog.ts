@@ -19,10 +19,24 @@ const RELEASE_BASE_URL = "https://github.com/Marve10s/Better-Fullstack/releases/
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: "v1.8.0",
+    publishedAt: "2026-05-24T13:38:37Z",
+    displayDate: "May 24, 2026",
+    isLatest: true,
+    href: `${RELEASE_BASE_URL}/v1.8.0`,
+    title: "Elixir and React Native ecosystems",
+    summary:
+      "This release adds Elixir as a first-class Phoenix ecosystem, splits React Native into a dedicated mobile ecosystem, and hardens generated-app CI with PostgreSQL, BEAM, strict smoke tests, and Playwright coverage.",
+    highlights: [
+      "Added Phoenix and Phoenix LiveView scaffolds with Ecto/PostgreSQL, auth, REST, Absinthe, realtime, jobs, email, caching, testing, Docker, and release setup.",
+      "Added React Native as a standalone Expo ecosystem with navigation, UI, storage, testing, push notifications, OTA updates, and deep-linking options.",
+      "Expanded release safety with PostgreSQL-backed smoke lanes, BEAM setup, strict core/broad generated-app checks, Playwright builder tests, and package-manager coverage.",
+    ],
+  },
+  {
     version: "v1.7.1",
     publishedAt: "2026-05-08T13:21:17Z",
     displayDate: "May 8, 2026",
-    isLatest: true,
     href: `${RELEASE_BASE_URL}/v1.7.1`,
     title: "Expanded ecosystem tools",
     summary:
