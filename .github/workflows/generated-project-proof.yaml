@@ -48,7 +48,7 @@ jobs:
           go-version: 1.25.1
 
       - name: Setup Python and uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           version: 0.8.14
 
