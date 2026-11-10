@@ -55,7 +55,7 @@ jobs:
           corepack prepare pnpm@10.20.0 --activate
 
       - name: Setup pinned Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.1
 
