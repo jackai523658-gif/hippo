@@ -29,7 +29,7 @@ jobs:
       source_sha: ${{ steps.release.outputs.source_sha }}
     steps:
       - name: Checkout the exact required-CI revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
@@ -304,7 +304,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout the exact required-CI revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.source_sha }}
           persist-credentials: false

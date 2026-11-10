@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -253,7 +253,7 @@ jobs:
         run: dnf install -y git tar gzip unzip libstdc++ which ca-certificates nodejs22
 
       - name: Checkout Dependency Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: deps/codebase-updates
 
