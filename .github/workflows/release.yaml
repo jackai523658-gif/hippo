@@ -41,7 +41,7 @@ jobs:
           bun-version: 1.4.0
 
       - name: Setup pinned Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.11.1
           registry-url: https://registry.npmjs.org
@@ -248,7 +248,7 @@ jobs:
           bun-version: 1.4.0
 
       - name: Setup pinned Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.11.1
           registry-url: https://registry.npmjs.org
@@ -315,7 +315,7 @@ jobs:
           bun-version: 1.4.0
 
       - name: Setup pinned Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.11.1
 
@@ -356,7 +356,7 @@ jobs:
           bun-version: 1.4.0
 
       - name: Setup pinned Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24.11.1
 
